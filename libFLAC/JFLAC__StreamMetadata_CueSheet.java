@@ -1,0 +1,497 @@
+package libFLAC;
+
+import java.util.Arrays;
+
+/** FLAC CUESHEET structure.  (See the
+ * <A HREF="../format.html#metadata_block_cuesheet">format specification</A>
+ * for the full description of each field.)
+ */
+public final class JFLAC__StreamMetadata_CueSheet extends JFLAC__StreamMetadata {
+	/** Media catalog number, in ASCII printable characters 0x20-0x7e.  In
+	 * general, the media catalog number may be 0 to 128 bytes long; any
+	 * unused characters should be right-padded with NUL characters.
+	 */
+	public final byte media_catalog_number[] = new byte[128 /* 129 */];// java: zero end do not need. TODO may be String?
+
+	/** The number of lead-in samples. */
+	public long lead_in;
+
+	/** \c true if CUESHEET corresponds to a Compact Disc, else \c false. */
+	public boolean is_cd;
+
+	/** The number of tracks. */
+	public int num_tracks;// TODO can be changed by the tracks.length
+
+	/** NULL if num_tracks == 0, else pointer to array of tracks. */
+	public JFLAC__StreamMetadata_CueSheet_Track[] tracks;
+
+	JFLAC__StreamMetadata_CueSheet() {
+		super.type = Jformat.FLAC__METADATA_TYPE_CUESHEET;
+	}
+
+	JFLAC__StreamMetadata_CueSheet(final JFLAC__StreamMetadata_CueSheet m) {
+		copyFrom( m );
+	}
+	private final void copyFrom(final JFLAC__StreamMetadata_CueSheet m) {
+		super.copyFrom( m );
+		System.arraycopy( m.media_catalog_number, 0, media_catalog_number, 0, media_catalog_number.length );
+		lead_in = m.lead_in;
+		is_cd = m.is_cd;
+		num_tracks = m.num_tracks;
+		tracks = JFLAC__StreamMetadata_CueSheet_Track.cuesheet_track_array_copy_( m.tracks, m.num_tracks );
+	}
+
+	final void clear() {
+		Arrays.fill( media_catalog_number, (byte)0 );
+		lead_in = 0;
+		is_cd = false;
+		num_tracks = 0;
+		tracks = null;
+	}
+
+	final void cuesheet_calculate_length_()
+	{
+		//FLAC__ASSERT(object->type == FLAC__METADATA_TYPE_CUESHEET);
+
+		this.length = (
+			Jformat.FLAC__STREAM_METADATA_CUESHEET_MEDIA_CATALOG_NUMBER_LEN +
+			Jformat.FLAC__STREAM_METADATA_CUESHEET_LEAD_IN_LEN +
+			Jformat.FLAC__STREAM_METADATA_CUESHEET_IS_CD_LEN +
+			Jformat.FLAC__STREAM_METADATA_CUESHEET_RESERVED_LEN +
+			Jformat.FLAC__STREAM_METADATA_CUESHEET_NUM_TRACKS_LEN
+		) / 8;
+
+		this.length += this.num_tracks * (
+			Jformat.FLAC__STREAM_METADATA_CUESHEET_TRACK_OFFSET_LEN +
+			Jformat.FLAC__STREAM_METADATA_CUESHEET_TRACK_NUMBER_LEN +
+			Jformat.FLAC__STREAM_METADATA_CUESHEET_TRACK_ISRC_LEN +
+			Jformat.FLAC__STREAM_METADATA_CUESHEET_TRACK_TYPE_LEN +
+			Jformat.FLAC__STREAM_METADATA_CUESHEET_TRACK_PRE_EMPHASIS_LEN +
+			Jformat.FLAC__STREAM_METADATA_CUESHEET_TRACK_RESERVED_LEN +
+			Jformat.FLAC__STREAM_METADATA_CUESHEET_TRACK_NUM_INDICES_LEN
+		) / 8;
+
+		for( int i = 0; i < this.num_tracks; i++ ) {
+			this.length += this.tracks[i].num_indices * (
+				Jformat.FLAC__STREAM_METADATA_CUESHEET_INDEX_OFFSET_LEN +
+				Jformat.FLAC__STREAM_METADATA_CUESHEET_INDEX_NUMBER_LEN +
+				Jformat.FLAC__STREAM_METADATA_CUESHEET_INDEX_RESERVED_LEN
+			) / 8;
+		}
+	}
+
+	private final boolean cuesheet_set_track_(final JFLAC__StreamMetadata_CueSheet_Track dest, final JFLAC__StreamMetadata_CueSheet_Track src, final boolean copy)
+	{
+		//FLAC__ASSERT(object != NULL);
+		//FLAC__ASSERT(dest != NULL);
+		//FLAC__ASSERT(src != NULL);
+		//FLAC__ASSERT(object->type == FLAC__METADATA_TYPE_CUESHEET);
+		//FLAC__ASSERT((src->indices != NULL && src->num_indices > 0) || (src->indices == NULL && src->num_indices == 0));
+
+		/* do the copy first so that if we fail we leave the object untouched */
+		if( copy ) {
+			if( ! JFLAC__StreamMetadata_CueSheet_Track.copy_track_( dest, src ) ) {
+				return false;
+			}
+		}
+		else {
+			dest.copyFrom( src );
+		}
+
+		cuesheet_calculate_length_();
+		return true;
+	}
+
+	static boolean compare_block_data_cuesheet_(final JFLAC__StreamMetadata_CueSheet block1, final JFLAC__StreamMetadata_CueSheet block2)
+	{
+		if( 0 != Jformat.memcmp( block1.media_catalog_number, 0, block2.media_catalog_number, 0, block1.media_catalog_number.length )) {
+			return false;
+		}
+
+		if( block1.lead_in != block2.lead_in ) {
+			return false;
+		}
+
+		if( block1.is_cd != block2.is_cd ) {
+			return false;
+		}
+
+		if( block1.num_tracks != block2.num_tracks ) {
+			return false;
+		}
+
+		if( block1.tracks != null && block2.tracks != null ) {
+			//FLAC__ASSERT(block1->num_tracks > 0);
+			final JFLAC__StreamMetadata_CueSheet_Track[] tracks1 = block1.tracks;// java
+			final JFLAC__StreamMetadata_CueSheet_Track[] tracks2 = block2.tracks;// java
+			for( int i = 0; i < block1.num_tracks; i++ ) {
+				final JFLAC__StreamMetadata_CueSheet_Track t1 = tracks1[i];// java
+				final JFLAC__StreamMetadata_CueSheet_Track t2 = tracks2[i];// java
+				if( t1.offset != t2.offset ) {
+					return false;
+				}
+				if( t1.number != t2.number ) {
+					return false;
+				}
+				if( 0 != Jformat.memcmp( t1.isrc, 0, t2.isrc, 0, t1.isrc.length ) ) {
+					return false;
+				}
+				if( t1.type != t2.type) {
+					return false;
+				}
+				if( t1.pre_emphasis != t2.pre_emphasis) {
+					return false;
+				}
+				if( t1.num_indices != t2.num_indices) {
+					return false;
+				}
+				if( t1.indices != null && t2.indices != null ) {
+					//FLAC__ASSERT(block1->tracks[i].num_indices > 0);
+					final JFLAC__StreamMetadata_CueSheet_Index[] indices1 = t1.indices;// java
+					final JFLAC__StreamMetadata_CueSheet_Index[] indices2 = t2.indices;// java
+					for( int j = 0; j < t1.num_indices; j++ ) {
+						final JFLAC__StreamMetadata_CueSheet_Index i1 = indices1[j];// java
+						final JFLAC__StreamMetadata_CueSheet_Index i2 = indices2[j];// java
+						if( i1.offset != i2.offset ) {
+							return false;
+						}
+						if( i1.number != i2.number ) {
+							return false;
+						}
+					}
+				}
+				else if( t1.indices != t2.indices ) {
+					return false;
+				}
+			}
+		}
+		else if( block1.tracks != block2.tracks ) {
+			return false;
+		}
+		return true;
+	}
+
+	public final boolean FLAC__metadata_object_cuesheet_track_resize_indices(final int track_num, final int new_num_indices)
+	{
+		//FLAC__ASSERT(object != NULL);
+		//FLAC__ASSERT(object->type == FLAC__METADATA_TYPE_CUESHEET);
+		//FLAC__ASSERT(track_num < object->data.cue_sheet.num_tracks);
+
+		final JFLAC__StreamMetadata_CueSheet_Track track = this.tracks[track_num];
+
+		if( track.indices == null ) {
+			//FLAC__ASSERT(track->num_indices == 0);
+			if( new_num_indices == 0 ) {
+				return true;
+			} else if( (track.indices = JFLAC__StreamMetadata_CueSheet_Index.cuesheet_track_index_array_new_( new_num_indices )) == null ) {
+				return false;
+			}
+		}
+		else {
+			final int new_size = new_num_indices;
+
+			/* overflow check */
+			if( new_num_indices > Jformat.SIZE_MAX ) {
+				return false;
+			}
+
+			//FLAC__ASSERT(track->num_indices > 0);
+
+			if( new_size == 0 ) {
+				track.indices = null;
+			}
+			else if( (track.indices = Arrays.copyOf( track.indices, new_size )) == null ) {
+				return false;
+			}
+
+			/* if growing, zero all the lengths/pointers of new elements */
+			//if( new_size > old_size )// java: already zeroed
+			//	memset(track.indices + track.num_indices, 0, new_size - old_size);
+		}
+
+		track.num_indices = (byte)new_num_indices;// FIXME hidden casting int to byte
+
+		this.cuesheet_calculate_length_();
+		return true;
+	}
+
+	public final boolean FLAC__metadata_object_cuesheet_track_insert_index(final int track_num, final int index_num, final JFLAC__StreamMetadata_CueSheet_Index indx)
+	{
+		//FLAC__ASSERT(object != NULL);
+		//FLAC__ASSERT(object->type == FLAC__METADATA_TYPE_CUESHEET);
+		//FLAC__ASSERT(track_num < object->data.cue_sheet.num_tracks);
+		//FLAC__ASSERT(index_num <= object->data.cue_sheet.tracks[track_num].num_indices);
+
+		final JFLAC__StreamMetadata_CueSheet_Track track = this.tracks[track_num];
+
+		if( ! FLAC__metadata_object_cuesheet_track_resize_indices( track_num, track.num_indices + 1 ) ) {
+			return false;
+		}
+
+		/* move all indices >= index_num forward one space */
+		System.arraycopy( track.indices, index_num, track.indices, index_num + 1, track.num_indices - 1 - index_num );
+
+		track.indices[index_num] = indx;// TODO check, C uses copy
+		cuesheet_calculate_length_();
+		return true;
+	}
+
+	public final boolean FLAC__metadata_object_cuesheet_track_insert_blank_index( final int track_num, final int index_num)
+	{
+		final JFLAC__StreamMetadata_CueSheet_Index indx = new JFLAC__StreamMetadata_CueSheet_Index();// java: already zeroed
+		return FLAC__metadata_object_cuesheet_track_insert_index( track_num, index_num, indx );
+	}
+
+	public final boolean FLAC__metadata_object_cuesheet_track_delete_index(final int track_num, final int index_num)
+	{
+		//FLAC__ASSERT(object != NULL);
+		//FLAC__ASSERT(object->type == FLAC__METADATA_TYPE_CUESHEET);
+		//FLAC__ASSERT(track_num < object->data.cue_sheet.num_tracks);
+		//FLAC__ASSERT(index_num < object->data.cue_sheet.tracks[track_num].num_indices);
+
+		final JFLAC__StreamMetadata_CueSheet_Track track = this.tracks[track_num];
+
+		/* move all indices > index_num backward one space */
+		System.arraycopy( track.indices, index_num + 1, track.indices, index_num, track.num_indices - index_num - 1 );
+
+		FLAC__metadata_object_cuesheet_track_resize_indices( track_num, track.num_indices - 1 );
+		cuesheet_calculate_length_();
+		return true;
+	}
+
+	public final boolean FLAC__metadata_object_cuesheet_resize_tracks(final int new_num_tracks)
+	{
+		//FLAC__ASSERT(object != NULL);
+		//FLAC__ASSERT(object->type == FLAC__METADATA_TYPE_CUESHEET);
+
+		if( this.tracks == null ) {
+			//FLAC__ASSERT(object->data.cue_sheet.num_tracks == 0);
+			if( new_num_tracks == 0 ) {
+				return true;
+			} else if( (this.tracks = JFLAC__StreamMetadata_CueSheet_Track.cuesheet_track_array_new_( new_num_tracks )) == null ) {
+				return false;
+			}
+		}
+		else {
+			final int new_size = new_num_tracks;
+
+			/* overflow check */
+			if( new_num_tracks > Jformat.SIZE_MAX ) {
+				return false;
+			}
+
+			//FLAC__ASSERT(object->data.cue_sheet.num_tracks > 0);
+
+			/* if shrinking, free the truncated entries */
+			if( new_num_tracks < this.num_tracks ) {
+				int i;
+				for( i = new_num_tracks; i < this.num_tracks; i++ ) {
+					this.tracks[i].indices = null;
+				}
+			}
+
+			if( new_size == 0 ) {
+				this.tracks = null;
+			}
+			else if( (this.tracks = Arrays.copyOf( this.tracks, new_size )) == null ) {
+				return false;
+			}
+
+			/* if growing, zero all the lengths/pointers of new elements */
+			//if( new_size > old_size )// java: already zeroed
+			//	memset(object.data.cue_sheet.tracks + object.data.cue_sheet.num_tracks, 0, new_size - old_size);
+		}
+
+		this.num_tracks = new_num_tracks;
+
+		cuesheet_calculate_length_();
+		return true;
+	}
+
+	public final boolean FLAC__metadata_object_cuesheet_set_track(final int track_num, final JFLAC__StreamMetadata_CueSheet_Track track, final boolean copy)
+	{
+		//FLAC__ASSERT(object != NULL);
+		//FLAC__ASSERT(track_num < object->data.cue_sheet.num_tracks);
+
+		return cuesheet_set_track_( this.tracks[track_num], track, copy );
+	}
+
+	public final boolean FLAC__metadata_object_cuesheet_insert_track(final int track_num, final JFLAC__StreamMetadata_CueSheet_Track track, final boolean copy)
+	{
+		//FLAC__ASSERT(object != NULL);
+		//FLAC__ASSERT(object->type == FLAC__METADATA_TYPE_CUESHEET);
+		//FLAC__ASSERT(track_num <= object->data.cue_sheet.num_tracks);
+
+		if( ! FLAC__metadata_object_cuesheet_resize_tracks( this.num_tracks + 1 ) ) {
+			return false;
+		}
+
+		/* move all tracks >= track_num forward one space */
+		System.arraycopy( this.tracks, track_num, this.tracks, track_num + 1, this.num_tracks - 1 - track_num );
+		this.tracks[track_num].num_indices = 0;
+		this.tracks[track_num].indices = null;
+
+		return FLAC__metadata_object_cuesheet_set_track( track_num, track, copy );
+	}
+
+	public final boolean FLAC__metadata_object_cuesheet_insert_blank_track(final int track_num)
+	{
+		final JFLAC__StreamMetadata_CueSheet_Track track = new JFLAC__StreamMetadata_CueSheet_Track();// java: already zeroed
+		return FLAC__metadata_object_cuesheet_insert_track( track_num, track, /*copy=*/false );
+	}
+
+	public final boolean FLAC__metadata_object_cuesheet_delete_track(final int track_num)
+	{
+		//FLAC__ASSERT(object != NULL);
+		//FLAC__ASSERT(object->type == FLAC__METADATA_TYPE_CUESHEET);
+		//FLAC__ASSERT(track_num < object->data.cue_sheet.num_tracks);
+
+		/* free the track at track_num */
+		this.tracks[track_num].indices = null;
+
+		/* move all tracks > track_num backward one space */
+		final int n1 = this.num_tracks - 1;// java
+		System.arraycopy( this.tracks, track_num + 1, this.tracks, track_num, n1 - track_num );
+		this.tracks[n1].num_indices = 0;
+		this.tracks[n1].indices = null;
+
+		return FLAC__metadata_object_cuesheet_resize_tracks( n1 );
+	}
+
+	/** @return String if error, null otherwise */
+	public final String /* boolean */ FLAC__metadata_object_cuesheet_is_legal(final boolean check_cd_da_subset/*, const char **violation*/)
+	{
+		//FLAC__ASSERT(object != NULL);
+		//FLAC__ASSERT(object->type == FLAC__METADATA_TYPE_CUESHEET);
+
+		return FLAC__format_cuesheet_is_legal( check_cd_da_subset );
+	}
+
+	private final long get_index_01_offset_(final int track)
+	{
+		if( track >= (this.num_tracks - 1) || this.tracks[track].num_indices < 1 ) {
+			return 0;
+		} else if( this.tracks[track].indices[0].number == 1 ) {
+			return this.tracks[track].indices[0].offset + this.tracks[track].offset + this.lead_in;
+		} else if( this.tracks[track].num_indices < 2 ) {
+			return 0;
+		} else if( this.tracks[track].indices[1].number == 1 ) {
+			return this.tracks[track].indices[1].offset + this.tracks[track].offset + this.lead_in;
+		} else {
+			return 0;
+		}
+	}
+
+	private static int cddb_add_digits_(int x)
+	{
+		int n = 0;
+		while( x != 0 ) {
+			n += (x % 10);
+			x /= 10;
+		}
+		return n;
+	}
+
+	/*@@@@add to tests*/
+	public final int FLAC__metadata_object_cuesheet_calculate_cddb_id()
+	{
+		//FLAC__ASSERT(object != NULL);
+		//FLAC__ASSERT(object->type == FLAC__METADATA_TYPE_CUESHEET);
+
+		if( this.num_tracks < 2 ) {
+			return 0;
+		}
+
+		{
+			final int n1 = this.num_tracks - 1;// java
+			int sum = 0;
+			for( int i = 0; i < n1; i++ ) {
+				sum += cddb_add_digits_( (int)(get_index_01_offset_( i ) / 44100) );
+			}
+			final int size = (int)((this.tracks[n1].offset + this.lead_in) / 44100) - (int)(get_index_01_offset_( 0 ) / 44100);
+
+			return (sum % 0xFF) << 24 | size << 8 | n1;
+		}
+	}
+
+	/* @@@@ add to unit tests; it is already indirectly tested by the metadata_object tests */
+	/** @return null if legal, String if not legal */
+	public final String FLAC__format_cuesheet_is_legal(final boolean check_cd_da_subset)
+	{
+		if( check_cd_da_subset ) {
+			if( this.lead_in < 2 * 44100 ) {
+				return "CD-DA cue sheet must have a lead-in length of at least 2 seconds";
+			}
+			if( this.lead_in % 588 != 0 ) {
+				return "CD-DA cue sheet lead-in length must be evenly divisible by 588 samples";
+			}
+		}
+
+		if( this.num_tracks == 0 ) {
+			return "cue sheet must have at least one track (the lead-out)";
+		}
+
+		final int ntracks1 = this.num_tracks - 1;// java
+		if( check_cd_da_subset && (int)this.tracks[ntracks1].number != 0xffffffAA /*170*/ ) {
+			return "CD-DA cue sheet must have a lead-out track number 170 (0xAA)";
+		}
+
+		for( int i = 0; i <= ntracks1; i++ ) {
+			final JFLAC__StreamMetadata_CueSheet_Track t = this.tracks[i];// java
+			if( t.number == 0 ) {
+				return "cue sheet may not have a track number 0";
+			}
+
+			if( check_cd_da_subset ) {
+				if( !((t.number >= 1 && t.number <= 99) || (int)t.number == 0xffffffAA /*170*/ ) ) {
+					return "CD-DA cue sheet track number must be 1-99 or 170";
+				}
+			}
+
+			if( check_cd_da_subset && t.offset % 588 != 0 ) {
+				if( i == ntracks1 ) {
+					return "CD-DA cue sheet lead-out offset must be evenly divisible by 588 samples";
+				}
+				return "CD-DA cue sheet track offset must be evenly divisible by 588 samples";
+			}
+
+			if( i < ntracks1 ) {
+				if( t.num_indices == 0 ) {
+					return "cue sheet track must have at least one index point";
+				}
+
+				if( t.indices[0].number > 1 ) {
+					return "cue sheet track's first index number must be 0 or 1";
+				}
+			}
+
+			for( int j = 0, n = t.num_indices; j < n; j++ ) {
+				final JFLAC__StreamMetadata_CueSheet_Index ti = t.indices[j];// java
+				if( check_cd_da_subset && ti.offset % 588 != 0 ) {
+					return "CD-DA cue sheet track index offset must be evenly divisible by 588 samples";
+				}
+
+				if( j > 0 ) {
+					if( ti.number != t.indices[j - 1].number + 1 ) {
+						return "cue sheet track index numbers must increase by 1";
+					}
+				}
+			}
+		}
+
+		return null;
+	}
+
+	// metadata_iterators.c
+	public final boolean FLAC__metadata_get_cuesheet(final String filename)
+	{
+		//FLAC__ASSERT(0 != filename);
+		//FLAC__ASSERT(0 != cuesheet);
+		final JFLAC__StreamMetadata_CueSheet cuesheet = (JFLAC__StreamMetadata_CueSheet) get_one_metadata_block_( filename, Jformat.FLAC__METADATA_TYPE_CUESHEET );
+		if( cuesheet != null ) {
+			copyFrom( cuesheet );
+		}
+
+		return null != cuesheet;
+	}
+}

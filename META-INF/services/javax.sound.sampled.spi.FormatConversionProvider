@@ -1,0 +1,2 @@
+# for the FLAC codec
+spi.convert.FLAC_FormatConversionProvider

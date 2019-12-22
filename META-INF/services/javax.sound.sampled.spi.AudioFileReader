@@ -1,0 +1,2 @@
+# for the FLAC decoder
+spi.file.FLAC_AudioFileReader
